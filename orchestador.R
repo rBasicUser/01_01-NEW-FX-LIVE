@@ -89,11 +89,10 @@ editor_options:
 ```
 
 ```{{r setup, include=FALSE}}
+library(extrafont)
 library(tidyverse)
 library(lubridate)
 library(kableExtra)
-library(scales)
-library(ggplot2)
 library(DT)
 library(zoo)      # rollmean / rollapply
 library(moments)  # skewness / kurtosis
@@ -113,8 +112,8 @@ lookback_months <- 12
 confidence_level <- 0.95
 
 # Tema visual
-theme_fx <- function() {{
-  theme_minimal() +
+theme_fx <- function() {
+  theme_minimal(base_family="Century Gothic") +
     theme(
       plot.title = element_text(size = 14, face = "bold", margin = margin(b = 20)),
       plot.subtitle = element_text(size = 11, color = "gray60"),
@@ -124,7 +123,7 @@ theme_fx <- function() {{
       panel.grid.minor = element_blank(),
       plot.caption = element_text(size = 9, color = "gray50", hjust = 0)
     )
-}}
+}
 ```
 
 ```{{r data-load, include=FALSE}}
@@ -140,7 +139,7 @@ previous_data <- df_data %>% dplyr::slice_tail(n = 2) %>% dplyr::slice_head(n = 
 # 📊 Resumen Ejecutivo
 
 ::: metric-card
-**Fecha del Análisis:** `r format(current_data$Fecha, \'%d de %B, %Y\')`
+**Fecha del Análisis:** `r format(current_data$Fecha, '%d de %B, %Y')`
 
 **Precio Actual:**
 `r number(current_data$D_Close, accuracy = 0.01, big.mark = ",")`
@@ -155,11 +154,11 @@ vs día anterior)
 **Percentil Historico:** `r round(current_data$Percentile, 1)`/100
 :::
 
-```{{r alerts, results="asis"}}
+```{r alerts, results="asis"}
 # Alertas
 alerts <- list()
 
-if (current_data$Outside20) {{
+if (current_data$Outside20) {
   alert_type <- if_else(current_data$D_Close > current_data$Higher20, "warning", "danger")
   alert_msg <- if_else(
     current_data$D_Close > current_data$Higher20, 
@@ -167,42 +166,42 @@ if (current_data$Outside20) {{
     "🚨 Precio fuera de banda inferior (20 períodos) - Posible sobreapreciación"
   )
   alerts <- append(alerts, list(list(type = alert_type, message = alert_msg)))
-}}
+}
 
-if (!is.na(current_data$rsi)) {{
-  if (current_data$rsi > 70) {{
+if (!is.na(current_data$rsi)) {
+  if (current_data$rsi > 70) {
     alerts <- append(alerts, list(list(type = "warning", message = "⚠️ RSI indica condición de sobredepreciación")))
-  }} else if (current_data$rsi < 30) {{
+  } else if (current_data$rsi < 30) {
     alerts <- append(alerts, list(list(type = "danger", message = "🚨 RSI indica condición de sobreapreciación")))
-  }}
-}}
+  }
+}
 
-if (abs(current_data$`%D`) > quantile(abs(df_data$`%D`), 0.95, na.rm = TRUE)) {{
+if (abs(current_data$`%D`) > quantile(abs(df_data$`%D`), 0.95, na.rm = TRUE)) {
   alerts <- append(alerts, list(list(type = "warning", message = "⚠️ Movimiento diario inusual detectado")))
-}}
+}
 
-if (length(alerts) > 0) {{
-  for (alert in alerts) {{
-    cat(paste0(\'<div class="alert alert-\', alert$type, \'">\', alert$message, \'</div>\'))
-  }}
-}} else {{
-  cat(\'<div class="alert alert-success">✅ No se detectaron señales de alerta inmediatas</div>\')
-}}
+if (length(alerts) > 0) {
+  for (alert in alerts) {
+    cat(paste0('<div class="alert alert-', alert$type, '">', alert$message, '</div>'))
+  }
+} else {
+  cat('<div class="alert alert-success">✅ No se detectaron señales de alerta inmediatas</div>')
+}
 ```
 
 # 📈 Posición Actual
 
-```{{r current-position}}
+```{r current-position}
 # Construcción explícita (evita rename/select/pivot_longer con tipos mixtos)
 library(tibble)
+
 
 current_formatted <- tibble(
   Métrica = c(
     "Precio",
-    "Cambio Diario (%)",
+    "Cambio Respecto al día anterior (%)",
     "Cambio Semanal (%)",
     "Cambio Anual (%)",
-    "RSI (14)",
     "Volatilidad (20d)",
     "Tendencia Corto",
     "Tendencia Medio",
@@ -213,8 +212,7 @@ current_formatted <- tibble(
     scales::percent(current_data$`%D`, accuracy = 0.01),
     scales::percent(current_data$`%W`, accuracy = 0.01),
     scales::percent(current_data$YoY, accuracy = 0.01),
-    as.character(round(current_data$rsi, 1)),
-    paste0(round(current_data$volatility_20, 1), "%"),
+    paste0("Q ", round((current_data$volatility_20 / 100 * current_data$D_Close), 3)),
     as.character(current_data$trend_short),
     as.character(current_data$trend_medium),
     as.character(current_data$trend_long)
@@ -234,150 +232,134 @@ current_formatted %>%
 
 ## Precio vs Medias Móviles y Bandas de Bollinger
 
-```{{r bollinger-enhanced, fig.height=8}}
-recent_data <- df_data %>% dplyr::filter(Fecha >= (Sys.Date() - months(lookback_months)))
+```{r bollinger-enhanced, fig.height=8}
+library(patchwork)
+recent_data <- df_data %>% dplyr::filter(Fecha >= (Sys.Date() - months(18)))
 
-p1 <- ggplot(recent_data, aes(x = Fecha)) +
-  geom_ribbon(aes(ymin = Lower20, ymax = Higher20), alpha = 0.15, fill = "blue") +
-  geom_ribbon(aes(ymin = Lower50, ymax = Higher50), alpha = 0.10, fill = "orange") +
-  geom_line(aes(y = SMA200), color = "red", linewidth = 0.8, alpha = 0.7) +
-  geom_line(aes(y = SMA50), color = "orange", linewidth = 0.7) +
-  geom_line(aes(y = SMA20), color = "blue", linewidth = 0.6) +
-  geom_line(aes(y = D_Close), color = "black", linewidth = 1) +
-  geom_point(data = current_data, aes(y = D_Close), color = "red", size = 3) +
-  labs(title = "Análisis Técnico Integral", subtitle = "Precio, Medias Móviles y Bandas de Bollinger",
-       y = "Nivel del Tipo de Cambio", x = NULL,
-       caption = "Bandas: SMA20±1SD (azul), SMA50±1SD (naranja) | Líneas: SMA20 (azul), SMA50 (naranja), SMA200 (rojo)") +
+# Ventanas de tiempo
+end_date <- max(df_data$Fecha, na.rm = TRUE)
+data_60m <- df_data %>% filter(Fecha >= (end_date %m-% months(60)))
+data_24m <- df_data %>% filter(Fecha >= (end_date %m-% months(18)))
+
+# --- Gráfico superior: Precio + SMA200 (60 meses) ---
+p_top <- ggplot(data_60m, aes(x = Fecha)) +
+  geom_line(aes(y = D_Close), color = "black", linewidth = 0.9) +
+  geom_line(aes(y = SMA200), color = "#1e567c", linewidth = 0.9, alpha = 0.9) +
+  labs(
+    title = "Tendencia de Largo Plazo (5 años)",
+    x = NULL, y = "Nivel del Tipo de Cambio",
+    caption = "SMA200: tendencia de largo plazo"
+  ) +
   theme_fx()
 
-print(p1)
+print(p_top)
 
-p2 <- ggplot(recent_data, aes(x = Fecha, y = rsi)) +
-  geom_hline(yintercept = c(30, 70), linetype = "dashed", color = "red", alpha = 0.7) +
-  geom_hline(yintercept = 50, linetype = "solid", color = "gray", alpha = 0.5) +
-  geom_line(linewidth = 0.8) +
-  geom_point(data = current_data, aes(y = rsi), size = 3) +
-  ylim(0, 100) +
-  labs(title = "Índice de Fuerza Relativa (RSI)", subtitle = "Señales de sobrecompra (>70) y sobreventa (<30)", y = "RSI", x = "Fecha") +
+# --- Gráfico inferior: SMA50 y SMA20 (24 meses) ---
+p_bottom <- ggplot(data_24m, aes(x = Fecha)) +
+  # Si tienes bandas de Bollinger ya calculadas:
+  geom_line(aes(y = D_Close), color = "black", linewidth = 0.9) +
+  geom_point(data = current_data, aes(x= Fecha, y = D_Close), color = "red", size = 3, inherit.aes = FALSE) +
+  geom_ribbon(aes(ymin = Lower20, ymax = Higher20), alpha = 0.15, fill = "#86bde2") +
+  geom_ribbon(aes(ymin = Lower50, ymax = Higher50), alpha = 0.10, fill = "#338fce") +
+  geom_line(aes(y = SMA50), color = "#338fce", linewidth = 0.9) +
+  geom_line(aes(y = SMA20), color = "#86bde2", linewidth = 0.9) +
+  labs(
+    title = "Tendencia de Corto Plazo (año y medio)",
+    x = NULL, y = "Nivel del Tipo de Cambio",
+    caption = "Bandas: SMA20±1SD (clara), SMA50±1SD (mediano plazo)"
+  ) +
   theme_fx()
 
-print(p2)
+# --- Ensamble con patchwork: uno sobre otro ---
+print(p_bottom)
 ```
 
 ## Análisis de Volatilidad
 
-```{{r volatility-analysis}}
+```{r volatility-analysis}
+# Paso 1: transformar la serie en dinero (precio del día)
+recent_data <- recent_data %>%
+  mutate(vol20_money = volatility_20 * D_Close / 100)
+
+# Paso 2: calcular la mediana de ese periodo en dinero
+mediana_money <- median(recent_data$vol20_money, na.rm = TRUE)
+
+# Paso 3: graficar
 p3 <- ggplot(recent_data, aes(x = Fecha)) +
-  geom_area(aes(y = volatility_20), alpha = 0.3) +
-  geom_line(aes(y = volatility_20), linewidth = 0.8) +
-  geom_hline(yintercept = median(df_data$volatility_20, na.rm = TRUE), linetype = "dashed", alpha = 0.7) +
-  labs(title = "Volatilidad Histórica (20 días)", subtitle = "Anualizada en porcentaje", y = "Volatilidad (%)", x = "Fecha", caption = "Línea discontinua: mediana histórica") +
+  geom_area(aes(y = vol20_money), alpha = 0.3) +
+  geom_line(aes(y = vol20_money), linewidth = 0.8) +
+  geom_hline(yintercept = mediana_money, linetype = "dashed", alpha = 0.7) +
+  labs(
+    title = "Volatilidad Histórica (20 días)",
+    subtitle = "Anualizada, expresada en dinero",
+    y = "Volatilidad (dinero por unidad)",
+    x = "Fecha",
+    caption = "Línea discontinua: mediana del periodo"
+  ) +
   theme_fx()
 
 print(p3)
+
 ```
 
-# 📋 Estadísticas y Métricas de Riesgo
+## Retorno y Riesgo  
 
-## Estadísticos Descriptivos
+::: {.side-by-side}
+::: {}
+```{r risk-metrics}
+calculate_var <- function(returns, confidence = 0.95) {
+  as.numeric(quantile(returns, confidence, na.rm = TRUE))
+}
 
-```{{r statistics-enhanced, results="asis"}}
-create_stats_table <- function(data_col, title) {{
-  data_bps <- data_col * 10000
-  tbl <- tibble(
-    Métrica = c("Media", "Mediana", "Desv. Estándar", "Varianza", 
-                "Percentil 5%", "Percentil 95%", "Máximo", "Mínimo",
-                "Sesgo", "Curtosis"),
-    Valor_bps = c(
-      mean(data_bps, na.rm = TRUE),
-      median(data_bps, na.rm = TRUE),
-      sd(data_bps, na.rm = TRUE),
-      var(data_bps, na.rm = TRUE),
-      quantile(data_bps, 0.05, na.rm = TRUE),
-      quantile(data_bps, 0.95, na.rm = TRUE),
-      max(data_bps, na.rm = TRUE),
-      min(data_bps, na.rm = TRUE),
-      moments::skewness(data_bps, na.rm = TRUE),
-      moments::kurtosis(data_bps, na.rm = TRUE) - 3
-    )
-  ) %>%
-    mutate(
-      Valor_bps = dplyr::case_when(
-        Métrica %in% c("Sesgo", "Curtosis") ~ round(Valor_bps, 3),
-        TRUE ~ round(Valor_bps, 2)
-      ),
-      Valor_bps = scales::number(Valor_bps, accuracy = 0.01)
-    ) %>%
-    kable("html", caption = title, col.names = c("Métrica", "Valor (bps)")) %>%
-    kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
-    row_spec(0, bold = TRUE)
-  
-  return(tbl)
-}}
-
-# Renderizar 3 tablas en columnas
-cat(\'<div style="display: flex; justify-content: space-around;">\')
-
-cat(\'<div style="flex: 1; padding: 5px;">\')
-create_stats_table(df_data$`%D`, "Cambios Diarios (%D)")
-cat(\'</div>\')
-
-cat(\'<div style="flex: 1; padding: 5px;">\')
-create_stats_table(df_data$`%W`, "Cambios Semanales (%W)")
-cat(\'</div>\')
-
-cat(\'<div style="flex: 1; padding: 5px;">\')
-create_stats_table(df_data$YoY, "Cambios Anuales (YoY)")
-cat(\'</div>\')
-
-cat(\'</div>\')
-```
-
-## Métricas de Riesgo
-
-```{{r risk-metrics}}
-calculate_var <- function(returns, confidence = 0.95) {{
-  as.numeric(quantile(returns, 1 - confidence, na.rm = TRUE))
-}}
-
-calculate_cvar <- function(returns, confidence = 0.95) {{
-  var_threshold <- calculate_var(returns, confidence)
-  mean(returns[returns <= var_threshold], na.rm = TRUE)
-}}
-
-calculate_max_drawdown <- function(prices) {{
+calculate_max_drawdown <- function(prices) {
   log_p <- log(prices)
   cummax_log <- cummax(log_p)
   drawdown <- exp(log_p - cummax_log) - 1
-  min(drawdown, na.rm = TRUE)
-}}
+  max(drawdown, na.rm = TRUE)
+}
 
-daily_returns <- df_data$`%D`
-weekly_returns <- df_data$`%W`
+
+annual_returns <- df_data$YoY
+
+# Calcular VaR en dinero
+var_daily_pct <- calculate_var(daily_returns, 0.95)
+var_weekly_pct <- calculate_var(weekly_returns, 0.95)
+var_annual_pct <- calculate_var(annual_returns, 0.95)
+var_daily_money <- var_daily_pct * current_data$D_Close
+var_weekly_money <- var_weekly_pct * current_data$D_Close
+var_annual_money <- var_annual_pct * current_data$D_Close
 
 risk_metrics <- tibble(
   Métrica = c(
-    "VaR Diario (95%)",
-    "VaR Semanal (95%)",
+    "VaR Diario (95%) - En dinero",
+    "VaR Diario (95%) - En %",
+    "VaR Semanal (95%) - En dinero",
+    "VaR Semanal (95%) - En %",
+    "VaR Anual (95%) - En dinero",
+    "VaR Anual (95%) - En %",
     "Máxima Pérdida Histórica (Max Drawdown)",
     "Volatilidad Actual (20d)",
     "Volatilidad Histórica (Anual)",
     "Sharpe Ratio (aprox.)"
   ),
   Valor = c(
-    calculate_var(daily_returns, confidence_level) * 10000,
-    calculate_var(weekly_returns, confidence_level) * 10000,
+    abs(var_daily_money),
+    abs(var_daily_pct) * 100,
+    abs(var_weekly_money),
+    abs(var_weekly_pct) * 100,
+    abs(var_annual_money),
+    abs(var_annual_pct) * 100,
     calculate_max_drawdown(df_data$D_Close) * 100,
     current_data$volatility_20,
     sd(daily_returns, na.rm = TRUE) * sqrt(252) * 100,
     (mean(daily_returns, na.rm = TRUE) / sd(daily_returns, na.rm = TRUE)) * sqrt(252)
   ),
-  Unidad = c("bps", "bps", "%", "%", "%", "ratio")
+  Unidad = c("Q", "%", "Q", "%", "Q", "%", "%", "%", "%", "ratio")
 ) %>%
   mutate(
     Valor_fmt = dplyr::case_when(
-      Unidad == "bps" ~ paste0(scales::number(Valor, accuracy = 0.1), " bps"),
-      Unidad == "%" ~ paste0(scales::number(Valor, accuracy = 0.1), " %"),
+      Unidad == "%" ~ paste0(scales::number(Valor, accuracy = 0.01), " %"),
+      Unidad == "Q" ~ paste0("Q ", scales::number(Valor, accuracy = 0.01)),
       TRUE ~ scales::number(Valor, accuracy = 0.01)
     )
   )
@@ -387,26 +369,53 @@ risk_metrics %>%
   kable("html", caption = "Métricas de Riesgo y Performance", col.names = c("Métrica", "Valor")) %>%
   kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
   row_spec(0, bold = TRUE) %>%
-  pack_rows("Value at Risk", 1, 3) %>%
-  pack_rows("Métricas de Volatilidad", 3, 5) %>%
-  pack_rows("Ratio de Performance", 6, 5)
+  pack_rows("Value at Risk", 1, 6) %>%
+  pack_rows("Métricas de Volatilidad", 7, 9) %>%
+  pack_rows("Ratio de Performance", 10, 10)
 ```
+:::
+
+::: {}
+```{r trend-analysis}
+trend_summary <- df_data %>%
+  dplyr::filter(Fecha >= (Sys.Date() - months(6))) %>%
+  dplyr::mutate(Mes = lubridate::floor_date(Fecha, "month")) %>%
+  dplyr::group_by(Mes) %>%
+  dplyr::summarise(
+    Retorno_Mensual = (dplyr::last(D_Close) / dplyr::first(D_Close) - 1) * 100,
+    .groups = "drop_last"
+  ) %>%
+  dplyr::ungroup()
+
+trend_summary %>%
+  dplyr::select(Mes, Retorno_Mensual) %>%
+  dplyr::mutate(
+    Mes = format(Mes, "%B %Y"),
+    Retorno_Mensual = paste0(round(Retorno_Mensual, 2), "%")
+  ) %>%
+  kable("html", caption = "Rendimientos Mensuales (Últimos 6 meses)",
+        col.names = c("Mes", "Retorno Mensual")) %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(0, bold = TRUE)
+```
+:::
+:::
 
 # 📈 Análisis de Distribuciones
 
-```{{r distributions, fig.height=10}}
+```{r distributions, fig.height=10}
 p4 <- df_data %>%
   dplyr::select(Fecha, `%D`, `%W`, YoY) %>%
   tidyr::pivot_longer(cols = c(`%D`, `%W`, YoY), names_to = "Periodo", values_to = "Retorno") %>%
   dplyr::mutate(
-    Retorno_bps = Retorno * 10000,
+    Retorno_pct = Retorno * 100,
     Periodo = dplyr::case_when(
       Periodo == "%D" ~ "Diario",
       Periodo == "%W" ~ "Semanal", 
       TRUE ~ "Anual"
     )
   ) %>%
-  ggplot(aes(x = Retorno_bps)) +
+  ggplot(aes(x = Retorno_pct)) +
   geom_histogram(aes(y = after_stat(density)), bins = 50, alpha = 0.7) +
   geom_density(linewidth = 1) +
   geom_vline(xintercept = 0, linetype = "dashed") +
@@ -414,7 +423,7 @@ p4 <- df_data %>%
   labs(
     title = "Distribución de Retornos por Período",
     subtitle = "Histograma con curva de densidad estimada",
-    x = "Retorno (bps)",
+    x = "Retorno (%)",
     y = "Densidad"
   ) +
   theme_fx()
@@ -422,45 +431,9 @@ p4 <- df_data %>%
 print(p4)
 ```
 
-# 🔍 Análisis de Tendencias y Patrones
-
-```{{r trend-analysis}}
-trend_summary <- df_data %>%
-  dplyr::filter(Fecha >= (Sys.Date() - months(6))) %>%
-  dplyr::mutate(Mes = lubridate::floor_date(Fecha, "month")) %>%
-  dplyr::group_by(Mes) %>%
-  dplyr::summarise(
-    Días_Depreciación_Corto = sum(trend_short == "Depreciación", na.rm = TRUE),
-    Días_Apreciación_Corto = sum(trend_short == "Apreciación", na.rm = TRUE),
-    Días_Lateral_Corto = sum(trend_short == "Lateral", na.rm = TRUE),
-    Total_Días = dplyr::n(),
-    Volatilidad_Promedio = mean(volatility_20, na.rm = TRUE),
-    Retorno_Mensual = (dplyr::last(D_Close) / dplyr::first(D_Close) - 1) * 100,
-    .groups = "drop_last"
-  ) %>%
-  dplyr::ungroup() %>%
-  dplyr::mutate(
-    Porcentaje_Depreciación = round(Días_Depreciación_Corto / Total_Días * 100, 1),
-    Porcentaje_Apreciación = round(Días_Apreciación_Corto / Total_Días * 100, 1),
-    Porcentaje_Lateral = round(Días_Lateral_Corto / Total_Días * 100, 1)
-  )
-
-trend_summary %>%
-  dplyr::select(Mes, Porcentaje_Depreciación, Porcentaje_Apreciación, Porcentaje_Lateral, Volatilidad_Promedio, Retorno_Mensual) %>%
-  dplyr::mutate(
-    Mes = format(Mes, "%B %Y"),
-    Volatilidad_Promedio = paste0(round(Volatilidad_Promedio, 1), "%"),
-    Retorno_Mensual = paste0(round(Retorno_Mensual, 2), "%")
-  ) %>%
-  kable("html", caption = "Análisis de Tendencias por Mes (Últimos 6 meses)",
-        col.names = c("Mes", "% Depreciación", "% Apreciación", "% Lateral", "Vol. Promedio", "Retorno Mensual")) %>%
-  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed")) %>%
-  row_spec(0, bold = TRUE)
-```
-
 # 📊 Dashboard de Señales
 
-```{{r signals-dashboard}}
+```{r signals-dashboard}
 signals_data <- tibble(
   Indicador = c(
     "Precio vs SMA20",
@@ -487,23 +460,8 @@ signals_data <- tibble(
     ),
     if_else(current_data$volatility_20 > median(df_data$volatility_20, na.rm = TRUE), "Alta", "Normal")
   ),
-  Fuerza = c(
-    abs(current_data$D_Close - current_data$SMA20) / current_data$SMA20 * 100,
-    abs(current_data$D_Close - current_data$SMA50) / current_data$SMA50 * 100,
-    abs(current_data$D_Close - current_data$SMA200) / current_data$SMA200 * 100,
-    abs(current_data$SMA20 - current_data$SMA50) / current_data$SMA50 * 100,
-    abs(current_data$SMA50 - current_data$SMA200) / current_data$SMA200 * 100,
-    if_else(current_data$bb_signal == "Neutral", 0, abs(current_data$D_Close - current_data$SMA20) / (current_data$Higher20 - current_data$Lower20) * 100),
-    if_else(is.na(current_data$rsi), 0, case_when(
-      current_data$rsi > 70 ~ current_data$rsi - 70,
-      current_data$rsi < 30 ~ 30 - current_data$rsi,
-      TRUE ~ 0
-    )),
-    abs(current_data$volatility_20 - median(df_data$volatility_20, na.rm = TRUE))
-  )
 ) %>%
   mutate(
-    Fuerza_pct = paste0(round(Fuerza, 2), "%"),
     Color = case_when(
       Señal %in% c("Depreciación", "Alta") ~ "success",
       Señal %in% c("Apreciación", "Sobreventa") ~ "danger", 
@@ -513,8 +471,8 @@ signals_data <- tibble(
   )
 
 signals_data %>%
-  dplyr::select(Indicador, Señal, Fuerza_pct) %>%
-  kable("html", caption = "Dashboard de Señales Técnicas", col.names = c("Indicador", "Señal", "Fuerza")) %>%
+  dplyr::select(Indicador, Señal) %>%
+  kable("html", caption = "Dashboard de Señales Técnicas", col.names = c("Indicador", "Señal")) %>%
   kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed")) %>%
   row_spec(0, bold = TRUE) %>%
   pack_rows("Señales de Precio", 1, 3) %>%
@@ -525,7 +483,7 @@ signals_data %>%
 
 ------------------------------------------------------------------------
 
-::: {{style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;"}}
+::: {style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;"}
 <h4>📝 Notas Metodológicas</h4>
 
 <ul>
@@ -546,12 +504,11 @@ precios y medias móviles</li>
 </ul>
 :::
 
-::: {{style="text-align: center; margin-top: 20px; color: #6c757d; font-size: 0.9em;"}}
+::: {style="text-align: center; margin-top: 20px; color: #6c757d; font-size: 0.9em;"}
 Reporte generado automáticamente el
-`r format(Sys.time(), \'%d de %B, %Y a las %H:%M\')` | © Equipo de
+`r format(Sys.time(), '%d de %B, %Y a las %H:%M')` | © Equipo de
 Inteligencia de Negocios
-:::
-')
+:::')
   
   # Crear nombre del archivo
   nombre_archivo <- glue("FX_Live_{codigo_pais}.Rmd")
