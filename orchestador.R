@@ -670,4 +670,30 @@ cat("  • generar_reportes_fx()    - Función principal con opciones\\n")
 cat("\\nPaíses configurados: ", paste(paises, collapse = ", "), "\\n")
 cat("\\n💡 Ejecuta generar_todo() para empezar\\n")
 
-generar_todo()
+
+
+renderizar_solo_html <- function(paises_a_procesar = paises) {
+  # Asegura entrar/salir del directorio correcto
+  if (!fs::dir_exists("reportes_FX")) stop("No existe el directorio 'reportes_FX'")
+  old <- setwd("reportes_FX"); on.exit(setwd(old), add = TRUE)
+
+  archivos <- glue::glue("FX_Live_{paises_a_procesar}.Rmd")
+  existentes <- archivos[fs::file_exists(archivos)]
+
+  if (length(existentes) == 0) {
+    stop("No hay archivos Rmd para renderizar en 'reportes_FX'.")
+  }
+
+  cat("\n🔄 RENDERIZANDO REPORTES HTML...\n")
+  res <- purrr::map(existentes, renderizar_reporte)
+
+  invisibly(res)
+}
+
+
+
+# Si hay necesidad de volver a generar los reportes por un cambio demasiado brusco en la estructura general del reporte, volver a generarlos
+#   
+# generar_todo()
+
+renderizar_solo_html
