@@ -130,7 +130,7 @@ theme_fx <- function() {{
 ```{{r data-load, include=FALSE}}
 
 # Cargar datos y preparar Métricas
-source("../Scripts/pilot {codigo_pais}.R")
+source("../scripts/pilot {codigo_pais}.R")
 
 # Observaciones actuales
 current_data <- df_data %>% dplyr::slice_tail(n = 1)
@@ -569,6 +569,7 @@ Inteligencia de Negocios
 # ====================================================================
 
 renderizar_reporte <- function(archivo_rmd) {
+  getwd()
   tryCatch({
     cat(glue("🔄 Renderizando: {archivo_rmd}...\\n"))
     
@@ -600,13 +601,13 @@ generar_reportes_fx <- function(paises_a_procesar = paises, renderizar = TRUE) {
   cat("====================================================================\\n")
   
   # Crear directorio de salida si no existe
-  if (!fs::dir_exists("Reportes_FX")) {
-    fs::dir_create("Reportes_FX")
+  if (!fs::dir_exists("reportes_FX")) {
+    fs::dir_create("reportes_FX")
     cat("📁 Directorio 'Reportes_FX' creado\\n")
   }
   
   # Cambiar al directorio de reportes
-  setwd("Reportes_FX")
+  setwd("reportes_FX")
   
   # Generar archivos RMD
   cat("\\n📝 GENERANDO ARCHIVOS RMD...\\n")
@@ -668,6 +669,5 @@ cat("  • generar_solo_rmd()       - Solo genera archivos RMD\\n")
 cat("  • generar_reportes_fx()    - Función principal con opciones\\n")
 cat("\\nPaíses configurados: ", paste(paises, collapse = ", "), "\\n")
 cat("\\n💡 Ejecuta generar_todo() para empezar\\n")
-
 
 generar_todo()

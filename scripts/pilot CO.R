@@ -21,7 +21,7 @@ start_date <- as.Date(params$start_date, format = "%Y-%m-%d")
 # -------------------------------------------
 # Carga de datos
 # -------------------------------------------
-df_data <- read_excel("Input/daily_data.xlsx", sheet = "CO") |>
+df_data <- read_excel("../input/daily_data.xlsx", sheet = "CO") |>
   select(Fecha, D_Close) |>
   mutate(
     Fecha   = as.Date(Fecha),

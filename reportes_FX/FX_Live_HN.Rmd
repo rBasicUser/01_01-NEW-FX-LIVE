@@ -96,7 +96,7 @@ theme_fx <- function() {
 ```{r data-load, include=FALSE}
 
 # Cargar datos y preparar Métricas
-source("../Scripts/pilot HN.R")
+source("../scripts/pilot HN.R")
 
 # Observaciones actuales
 current_data <- df_data %>% dplyr::slice_tail(n = 1)

@@ -15,13 +15,13 @@ library(TTR)
 # -------------------------------------------
 # Parámetros
 # -------------------------------------------
-params     <- read_yaml("Scripts/params.yaml")
+params     <- read_yaml("../scripts/params.yaml")
 start_date <- as.Date(params$start_date, format = "%Y-%m-%d")
 
 # -------------------------------------------
 # Carga de datos
 # -------------------------------------------
-df_data <- read_excel("Input/daily_data.xlsx", sheet = "HN") |>
+df_data <- read_excel("../input/daily_data.xlsx", sheet = "HN") |>
   select(Fecha, D_Close) |>
   mutate(
     Fecha   = as.Date(Fecha),
