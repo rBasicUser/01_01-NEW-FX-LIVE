@@ -696,4 +696,4 @@ renderizar_solo_html <- function(paises_a_procesar = paises) {
 #   
 # generar_todo()
 
-renderizar_solo_html
+renderizar_solo_html()
