@@ -1,0 +1,79 @@
+/* Configuración general de fuente */
+body {
+    font-family: 'Century Gothic', 'Futura', 'Avenir', sans-serif;
+    line-height: 1.6;
+}
+
+/* Estilos para todos los encabezados */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Century Gothic', 'Futura', 'Avenir', sans-serif;
+    background: linear-gradient(135deg, #fa5700, #f40000, #9f0087);
+    color: white;
+    padding: 15px 20px;
+    margin: 20px 0 15px 0;
+    border-radius: 8px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Estilos específicos por nivel de encabezado */
+h1 {
+    font-size: 2.2em;
+    padding: 20px 25px;
+    margin: 25px 0 20px 0;
+}
+
+h2 {
+    font-size: 1.8em;
+    padding: 18px 22px;
+}
+
+h3 {
+    font-size: 1.5em;
+    padding: 15px 20px;
+}
+
+h4 {
+    font-size: 1.3em;
+    padding: 12px 18px;
+}
+
+h5 {
+    font-size: 1.1em;
+    padding: 10px 15px;
+}
+
+h6 {
+    font-size: 1em;
+    padding: 8px 12px;
+}
+
+/* Opcional: Efecto hover para encabezados */
+h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
+    background: linear-gradient(135deg, #ff6a1a, #ff1a1a, #b91aa0);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Asegurar que otros elementos mantengan Century Gothic */
+p, li, td, th, .table, code, pre {
+    font-family: 'Century Gothic', 'Futura', 'Avenir', sans-serif;
+}
+
+/* Estilo para código inline */
+code {
+    background-color: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'Century Gothic', 'Consolas', 'Monaco', monospace;
+}
+
+/* Estilo para bloques de código */
+pre {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    border-left: 4px solid #fa5700;
+    overflow-x: auto;
+}
