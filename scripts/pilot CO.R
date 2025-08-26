@@ -15,7 +15,7 @@ library(TTR)
 # -------------------------------------------
 # Parámetros
 # -------------------------------------------
-params     <- read_yaml("params.yaml")
+params     <- read_yaml("../scripts/params.yaml")
 start_date <- as.Date(params$start_date, format = "%Y-%m-%d")
 
 # -------------------------------------------

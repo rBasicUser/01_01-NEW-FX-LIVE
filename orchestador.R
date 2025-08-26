@@ -53,7 +53,7 @@ editor_options:
 ---
 
 ```{{=html}}
-<style>
+
 .alert {{
   padding: 15px;
   margin-bottom: 20px;
@@ -85,11 +85,23 @@ editor_options:
 .trend-up {{ color: #28a745; font-weight: bold; }}
 .trend-down {{ color: #dc3545; font-weight: bold; }}
 .trend-neutral {{ color: #6c757d; font-weight: bold; }}
-</style>
-```
+.side-by-side {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}}
+.side-by-side > div {{
+  flex: 1;
+  min-width: 300px;
+}}
 
+```
+  
+  
 ```{{r setup, include=FALSE}}
 library(extrafont)
+library(scales)
 library(tidyverse)
 library(lubridate)
 library(kableExtra)
@@ -112,7 +124,7 @@ lookback_months <- 12
 confidence_level <- 0.95
 
 # Tema visual
-theme_fx <- function() {
+theme_fx <- function() {{
   theme_minimal(base_family="Century Gothic") +
     theme(
       plot.title = element_text(size = 14, face = "bold", margin = margin(b = 20)),
@@ -123,7 +135,7 @@ theme_fx <- function() {
       panel.grid.minor = element_blank(),
       plot.caption = element_text(size = 9, color = "gray50", hjust = 0)
     )
-}
+}}
 ```
 
 ```{{r data-load, include=FALSE}}
@@ -139,7 +151,7 @@ previous_data <- df_data %>% dplyr::slice_tail(n = 2) %>% dplyr::slice_head(n = 
 # 📊 Resumen Ejecutivo
 
 ::: metric-card
-**Fecha del Análisis:** `r format(current_data$Fecha, '%d de %B, %Y')`
+**Fecha del Análisis:** `r format(current_data$Fecha, \'%d de %B, %Y\')`
 
 **Precio Actual:**
 `r number(current_data$D_Close, accuracy = 0.01, big.mark = ",")`
@@ -154,11 +166,11 @@ vs día anterior)
 **Percentil Historico:** `r round(current_data$Percentile, 1)`/100
 :::
 
-```{r alerts, results="asis"}
+```{{r alerts, results="asis"}}
 # Alertas
 alerts <- list()
 
-if (current_data$Outside20) {
+if (current_data$Outside20) {{
   alert_type <- if_else(current_data$D_Close > current_data$Higher20, "warning", "danger")
   alert_msg <- if_else(
     current_data$D_Close > current_data$Higher20, 
@@ -166,32 +178,32 @@ if (current_data$Outside20) {
     "🚨 Precio fuera de banda inferior (20 períodos) - Posible sobreapreciación"
   )
   alerts <- append(alerts, list(list(type = alert_type, message = alert_msg)))
-}
+}}
 
-if (!is.na(current_data$rsi)) {
-  if (current_data$rsi > 70) {
+if (!is.na(current_data$rsi)) {{
+  if (current_data$rsi > 70) {{
     alerts <- append(alerts, list(list(type = "warning", message = "⚠️ RSI indica condición de sobredepreciación")))
-  } else if (current_data$rsi < 30) {
+  }} else if (current_data$rsi < 30) {{
     alerts <- append(alerts, list(list(type = "danger", message = "🚨 RSI indica condición de sobreapreciación")))
-  }
-}
+  }}
+}}
 
-if (abs(current_data$`%D`) > quantile(abs(df_data$`%D`), 0.95, na.rm = TRUE)) {
+if (abs(current_data$`%D`) > quantile(abs(df_data$`%D`), 0.95, na.rm = TRUE)) {{
   alerts <- append(alerts, list(list(type = "warning", message = "⚠️ Movimiento diario inusual detectado")))
-}
+}}
 
-if (length(alerts) > 0) {
-  for (alert in alerts) {
-    cat(paste0('<div class="alert alert-', alert$type, '">', alert$message, '</div>'))
-  }
-} else {
-  cat('<div class="alert alert-success">✅ No se detectaron señales de alerta inmediatas</div>')
-}
+if (length(alerts) > 0) {{
+  for (alert in alerts) {{
+    cat(paste0(\'<div class="alert alert-\', alert$type, \'">\', alert$message, \'</div>\'))
+  }}
+}} else {{
+  cat(\'<div class="alert alert-success">✅ No se detectaron señales de alerta inmediatas</div>\')
+}}
 ```
 
 # 📈 Posición Actual
 
-```{r current-position}
+```{{r current-position}}
 # Construcción explícita (evita rename/select/pivot_longer con tipos mixtos)
 library(tibble)
 
@@ -232,7 +244,7 @@ current_formatted %>%
 
 ## Precio vs Medias Móviles y Bandas de Bollinger
 
-```{r bollinger-enhanced, fig.height=8}
+```{{r bollinger-enhanced, fig.height=8}}
 library(patchwork)
 recent_data <- df_data %>% dplyr::filter(Fecha >= (Sys.Date() - months(18)))
 
@@ -276,7 +288,7 @@ print(p_bottom)
 
 ## Análisis de Volatilidad
 
-```{r volatility-analysis}
+```{{r volatility-analysis}}
 # Paso 1: transformar la serie en dinero (precio del día)
 recent_data <- recent_data %>%
   mutate(vol20_money = volatility_20 * D_Close / 100)
@@ -304,21 +316,22 @@ print(p3)
 
 ## Retorno y Riesgo  
 
-::: {.side-by-side}
-::: {}
-```{r risk-metrics}
-calculate_var <- function(returns, confidence = 0.95) {
+::: {{.side-by-side}}
+::: {{}}
+```{{r risk-metrics}}
+calculate_var <- function(returns, confidence = 0.95) {{
   as.numeric(quantile(returns, confidence, na.rm = TRUE))
-}
+}}
 
-calculate_max_drawdown <- function(prices) {
+calculate_max_drawdown <- function(prices) {{
   log_p <- log(prices)
   cummax_log <- cummax(log_p)
   drawdown <- exp(log_p - cummax_log) - 1
   max(drawdown, na.rm = TRUE)
-}
+}}
 
-
+daily_returns <- df_data$`%D`
+weekly_return <- df_data$`%W`
 annual_returns <- df_data$YoY
 
 # Calcular VaR en dinero
@@ -375,8 +388,8 @@ risk_metrics %>%
 ```
 :::
 
-::: {}
-```{r trend-analysis}
+::: {{}}
+```{{r trend-analysis}}
 trend_summary <- df_data %>%
   dplyr::filter(Fecha >= (Sys.Date() - months(6))) %>%
   dplyr::mutate(Mes = lubridate::floor_date(Fecha, "month")) %>%
@@ -403,7 +416,7 @@ trend_summary %>%
 
 # 📈 Análisis de Distribuciones
 
-```{r distributions, fig.height=10}
+```{{r distributions, fig.height=10}}
 p4 <- df_data %>%
   dplyr::select(Fecha, `%D`, `%W`, YoY) %>%
   tidyr::pivot_longer(cols = c(`%D`, `%W`, YoY), names_to = "Periodo", values_to = "Retorno") %>%
@@ -433,7 +446,7 @@ print(p4)
 
 # 📊 Dashboard de Señales
 
-```{r signals-dashboard}
+```{{r signals-dashboard}}
 signals_data <- tibble(
   Indicador = c(
     "Precio vs SMA20",
@@ -483,7 +496,7 @@ signals_data %>%
 
 ------------------------------------------------------------------------
 
-::: {style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;"}
+::: {{style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;"}}
 <h4>📝 Notas Metodológicas</h4>
 
 <ul>
@@ -504,9 +517,9 @@ precios y medias móviles</li>
 </ul>
 :::
 
-::: {style="text-align: center; margin-top: 20px; color: #6c757d; font-size: 0.9em;"}
+::: {{style="text-align: center; margin-top: 20px; color: #6c757d; font-size: 0.9em;"}}
 Reporte generado automáticamente el
-`r format(Sys.time(), '%d de %B, %Y a las %H:%M')` | © Equipo de
+`r format(Sys.time(), \'%d de %B, %Y a las %H:%M\')` | © Equipo de
 Inteligencia de Negocios
 :::')
   
@@ -516,7 +529,7 @@ Inteligencia de Negocios
   # Escribir el archivo
   writeLines(template_rmd, nombre_archivo)
   
-  cat(glue("✅ Archivo generado: {nombre_archivo}\\n"))
+  cat(glue("✅ Archivo generado: {nombre_archivo}\n"))
   
   return(nombre_archivo)
 }
@@ -528,7 +541,7 @@ Inteligencia de Negocios
 renderizar_reporte <- function(archivo_rmd) {
   getwd()
   tryCatch({
-    cat(glue("🔄 Renderizando: {archivo_rmd}...\\n"))
+    cat(glue("🔄 Renderizando: {archivo_rmd}...\n"))
     
     rmarkdown::render(
       archivo_rmd,
@@ -538,11 +551,11 @@ renderizar_reporte <- function(archivo_rmd) {
     )
     
     archivo_html <- gsub(".Rmd$", ".html", archivo_rmd)
-    cat(glue("✅ Completado: {archivo_html}\\n"))
+    cat(glue("✅ Completado: {archivo_html}\n"))
     
     return(archivo_html)
   }, error = function(e) {
-    cat(glue("❌ Error renderizando {archivo_rmd}: {e$message}\\n"))
+    cat(glue("❌ Error renderizando {archivo_rmd}: {e$message}\n"))
     return(NULL)
   })
 }
@@ -553,49 +566,49 @@ renderizar_reporte <- function(archivo_rmd) {
 
 generar_reportes_fx <- function(paises_a_procesar = paises, renderizar = TRUE) {
   
-  cat("====================================================================\\n")
-  cat("🚀 INICIANDO GENERACIÓN DE REPORTES FX LIVE\\n")
-  cat("====================================================================\\n")
+  cat("====================================================================\n")
+  cat("🚀 INICIANDO GENERACIÓN DE REPORTES FX LIVE\n")
+  cat("====================================================================\n")
   
   # Crear directorio de salida si no existe
   if (!fs::dir_exists("reportes_FX")) {
     fs::dir_create("reportes_FX")
-    cat("📁 Directorio 'Reportes_FX' creado\\n")
+    cat("📁 Directorio 'Reportes_FX' creado\n")
   }
   
   # Cambiar al directorio de reportes
   setwd("reportes_FX")
   
   # Generar archivos RMD
-  cat("\\n📝 GENERANDO ARCHIVOS RMD...\\n")
+  cat("\n📝 GENERANDO ARCHIVOS RMD...\n")
   archivos_generados <- map_chr(paises_a_procesar, crear_rmd_pais)
   
   # Renderizar si es solicitado
   if (renderizar) {
-    cat("\\n🔄 RENDERIZANDO REPORTES HTML...\\n")
+    cat("\n🔄 RENDERIZANDO REPORTES HTML...\n")
     reportes_html <- map(archivos_generados, renderizar_reporte)
     reportes_exitosos <- reportes_html[!map_lgl(reportes_html, is.null)]
     
-    cat("\\n====================================================================\\n")
-    cat(glue("✅ PROCESO COMPLETADO: {length(reportes_exitosos)}/{length(paises_a_procesar)} reportes generados exitosamente\\n"))
+    cat("\n====================================================================\n")
+    cat(glue("✅ PROCESO COMPLETADO: {length(reportes_exitosos)}/{length(paises_a_procesar)} reportes generados exitosamente\n"))
     
     if (length(reportes_exitosos) > 0) {
-      cat("\\n📋 REPORTES GENERADOS:\\n")
-      walk(reportes_exitosos, ~ cat(glue("   • {.x}\\n")))
+      cat("\n📋 REPORTES GENERADOS:\n")
+      walk(reportes_exitosos, ~ cat(glue("   • {.x}\n")))
     }
     
     if (length(reportes_exitosos) < length(paises_a_procesar)) {
-      cat("\\n⚠️  ALGUNOS REPORTES FALLARON - Revise los mensajes de error arriba\\n")
+      cat("\n⚠️  ALGUNOS REPORTES FALLARON - Revise los mensajes de error arriba\n")
     }
   } else {
-    cat("\\n📝 Archivos RMD generados (sin renderizar)\\n")
-    walk(archivos_generados, ~ cat(glue("   • {.x}\\n")))
+    cat("\n📝 Archivos RMD generados (sin renderizar)\n")
+    walk(archivos_generados, ~ cat(glue("   • {.x}\n")))
   }
   
   # Regresar al directorio original
   setwd("..")
   
-  cat("\\n🎯 Proceso finalizado\\n")
+  cat("\n🎯 Proceso finalizado\n")
   return(archivos_generados)
 }
 
@@ -613,22 +626,6 @@ generar_todo <- function() {
   generar_reportes_fx(renderizar = TRUE)
 }
 
-# ====================================================================
-# INSTRUCCIONES DE USO
-# ====================================================================
-
-cat("====================================================================\\n")
-cat("🔧 SISTEMA DE GENERACIÓN DE REPORTES FX LIVE CARGADO\\n")
-cat("====================================================================\\n")
-cat("\\nFunciones disponibles:\\n")
-cat("  • generar_todo()           - Genera RMD y renderiza HTML para todos los países\\n")
-cat("  • generar_solo_rmd()       - Solo genera archivos RMD\\n")
-cat("  • generar_reportes_fx()    - Función principal con opciones\\n")
-cat("\\nPaíses configurados: ", paste(paises, collapse = ", "), "\\n")
-cat("\\n💡 Ejecuta generar_todo() para empezar\\n")
-
-
-
 renderizar_solo_html <- function(paises_a_procesar = paises) {
   # Asegura entrar/salir del directorio correcto
   if (!fs::dir_exists("reportes_FX")) stop("No existe el directorio 'reportes_FX'")
@@ -644,13 +641,27 @@ renderizar_solo_html <- function(paises_a_procesar = paises) {
   cat("\n🔄 RENDERIZANDO REPORTES HTML...\n")
   res <- purrr::map(existentes, renderizar_reporte)
 
-  invisibly(res)
+  invisible(res)
 }
 
+# ====================================================================
+# INSTRUCCIONES DE USO
+# ====================================================================
 
+cat("====================================================================\n")
+cat("🔧 SISTEMA DE GENERACIÓN DE REPORTES FX LIVE CARGADO\n")
+cat("====================================================================\n")
+cat("\nFunciones disponibles:\n")
+cat("  • generar_todo()           - Genera RMD y renderiza HTML para todos los países\n")
+cat("  • generar_solo_rmd()       - Solo genera archivos RMD\n")
+cat("  • generar_reportes_fx()    - Función principal con opciones\n")
+cat("\nPaíses configurados: ", paste(paises, collapse = ", "), "\n")
+cat("\n💡 Ejecuta generar_todo() para empezar\n")
 
 # Si hay necesidad de volver a generar los reportes por un cambio demasiado brusco en la estructura general del reporte, volver a generarlos
 #   
 # generar_todo()
 
-renderizar_solo_html()
+generar_todo()
+
+#renderizar_solo_html()
