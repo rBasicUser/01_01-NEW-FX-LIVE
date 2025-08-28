@@ -19,8 +19,8 @@
       font-weight: bold; backdrop-filter: blur(10px);
     }
     .country-btn.active { background: rgba(255,255,255,.35); border-color: rgba(255,255,255,.9); color:#1f2937; }
-    .country-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+    /* === Viewer con crossfade === */
     .viewer-wrap { position: relative; height: 85vh; border:1px solid #e5e7eb; border-radius: 12px; overflow:hidden; }
     .viewer-wrap iframe {
       position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
@@ -29,27 +29,10 @@
     .viewer-wrap iframe.show { opacity: 1; }
     .loader {
       position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-      pointer-events:none; font-size:.95rem; color:#555; background: rgba(255,255,255,0.8);
-      opacity:0; transition: opacity .2s ease; flex-direction: column; gap: 10px;
+      pointer-events:none; font-size:.95rem; color:#555; background: rgba(255,255,255,0.6);
+      opacity:0; transition: opacity .2s ease;
     }
     .loader.show { opacity:1; }
-    .spinner {
-      width: 40px; height: 40px; border: 4px solid #f3f3f3;
-      border-top: 4px solid #667eea; border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .error-message {
-      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      background: #fee2e2; color: #dc2626; font-size: 16px; text-align: center;
-      opacity: 0; transition: opacity .3s ease; flex-direction: column; gap: 15px;
-    }
-    .error-message.show { opacity: 1; }
-    .retry-btn {
-      background: #dc2626; color: white; border: none; padding: 10px 20px;
-      border-radius: 6px; cursor: pointer; font-size: 14px;
-    }
-    .retry-btn:hover { background: #b91c1c; }
   </style>
 </head>
 <body>
@@ -59,19 +42,14 @@
   </section>
 
   <div class="viewer-wrap" id="viewerWrap">
-    <div class="loader" id="loader">
-      <div class="spinner"></div>
-      <div>Cargando reporte…</div>
-    </div>
-    <div class="error-message" id="errorMessage">
-      <div>⚠️ Error al cargar el reporte</div>
-      <button class="retry-btn" id="retryBtn">Reintentar</button>
-    </div>
+    <div class="loader" id="loader">Cargando reporte…</div>
+    <!-- Dos iframes superpuestos -->
     <iframe id="frameA" title="Reporte A"></iframe>
     <iframe id="frameB" title="Reporte B"></iframe>
   </div>
 
   <script>
+    // Mapa de reportes (ajusta nombres si difieren)
     const reportes = {
       "GT": { nombre: "Guatemala", archivo: "FX_Live_GT.html" },
       "HN": { nombre: "Honduras", archivo: "FX_Live_HN.html" },
@@ -84,15 +62,11 @@
 
     const picker = document.getElementById("picker");
     const loader = document.getElementById("loader");
-    const errorMessage = document.getElementById("errorMessage");
-    const retryBtn = document.getElementById("retryBtn");
     const frameA = document.getElementById("frameA");
     const frameB = document.getElementById("frameB");
 
+    // Estado: cuál iframe está visible
     let visible = frameA;
-    let currentCountry = null;
-    let loadingTimeout = null;
-    let isLoading = false;
 
     // Crear botones
     for (const cod of Object.keys(reportes)) {
@@ -105,159 +79,63 @@
       picker.appendChild(btn);
     }
 
-    // Botón retry
-    retryBtn.addEventListener("click", () => {
-      if (currentCountry) {
-        hideError();
-        setPais(currentCountry);
-      }
-    });
-
+    // Lee ?country=XX
     const params = new URLSearchParams(location.search);
     const paisInicial = (params.get("country") || "GT").toUpperCase();
 
     function markActive(cod) {
       for (const b of picker.querySelectorAll(".country-btn")) {
-        const isActive = b.dataset.cod === cod;
-        b.classList.toggle("active", isActive);
-        b.setAttribute("aria-pressed", isActive ? "true" : "false");
-        b.disabled = isLoading; // Deshabilitar durante carga
+        b.classList.toggle("active", b.dataset.cod === cod);
+        b.setAttribute("aria-pressed", b.dataset.cod === cod ? "true" : "false");
       }
-    }
-
-    function showLoader() {
-      loader.classList.add("show");
-      errorMessage.classList.remove("show");
-    }
-
-    function hideLoader() {
-      loader.classList.remove("show");
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-        loadingTimeout = null;
-      }
-    }
-
-    function showError() {
-      loader.classList.remove("show");
-      errorMessage.classList.add("show");
-      isLoading = false;
-      markActive(currentCountry); // Re-habilitar botones
-    }
-
-    function hideError() {
-      errorMessage.classList.remove("show");
     }
 
     function setPais(cod) {
       const info = reportes[cod];
-      if (!info || isLoading) return;
+      if (!info) return;
 
-      // Evitar cargar el mismo país
-      if (cod === currentCountry && visible.classList.contains("show")) {
-        return;
-      }
+      // Mostrar loader durante la carga del nuevo iframe
+      loader.classList.add("show");
 
-      isLoading = true;
-      currentCountry = cod;
-      hideError();
-      showLoader();
-
-      // Timeout de seguridad (10 segundos)
-      loadingTimeout = setTimeout(() => {
-        showError();
-      }, 10000);
-
+      // El iframe oculto será el target de carga
       const hidden = (visible === frameA) ? frameB : frameA;
 
-      // Limpiar eventos previos
-      hidden.onload = null;
-      hidden.onerror = null;
-
-      // Preparar iframe oculto
+      // Preparar: ocultar el hidden por si quedó visible antes
       hidden.classList.remove("show");
 
-      // Eventos de carga
+      // Cargar el nuevo HTML en el iframe oculto
       hidden.onload = () => {
-        if (cod !== currentCountry) return; // Ignorar si ya cambió
-
-        hideLoader();
-        hidden.classList.add("show");
-        visible.classList.remove("show");
-        visible = hidden;
-        isLoading = false;
-        markActive(cod);
+        // cruza opacidades
+        hidden.classList.add("show");     // aparece el nuevo
+        visible.classList.remove("show"); // se desvanece el anterior
+        visible = hidden;                 // actualiza referencia
+        loader.classList.remove("show");
       };
+      hidden.src = info.archivo;
 
-      hidden.onerror = () => {
-        if (cod !== currentCountry) return;
-        showError();
-      };
-
-      // Verificar si el archivo existe antes de cargar
-      fetch(info.archivo, { method: 'HEAD' })
-        .then(response => {
-          if (!response.ok) throw new Error('Archivo no encontrado');
-          hidden.src = info.archivo;
-        })
-        .catch(() => {
-          showError();
-        });
-
-      // Actualizar URL
+      // Actualiza querystring sin recargar
       const url = new URL(location);
       url.searchParams.set("country", cod);
       history.replaceState({}, "", url);
+
+      markActive(cod);
     }
 
+    // Inicio: carga el país inicial en el iframe visible
     function boot(cod) {
       const info = reportes[cod] || reportes[Object.keys(reportes)[0]];
-      currentCountry = cod;
-      showLoader();
-      
-      // Timeout de seguridad
-      loadingTimeout = setTimeout(() => {
-        showError();
-      }, 10000);
-
+      markActive(cod);
+      loader.classList.add("show");
       visible.onload = () => {
-        if (cod !== currentCountry) return;
-        hideLoader();
         visible.classList.add("show");
-        isLoading = false;
-        markActive(cod);
+        loader.classList.remove("show");
       };
-
-      visible.onerror = () => {
-        if (cod !== currentCountry) return;
-        showError();
-      };
-
-      // Verificar archivo antes de cargar
-      fetch(info.archivo, { method: 'HEAD' })
-        .then(response => {
-          if (!response.ok) throw new Error('Archivo no encontrado');
-          visible.src = info.archivo;
-        })
-        .catch(() => {
-          showError();
-        });
-
+      visible.src = info.archivo;
+      // fija query inicial
       const url = new URL(location);
       url.searchParams.set("country", cod);
       history.replaceState({}, "", url);
     }
-
-    // Prevenir navegación múltiple rápida
-    let debounceTimer = null;
-    picker.addEventListener("click", (e) => {
-      if (e.target.matches(".country-btn")) {
-        if (debounceTimer) return;
-        debounceTimer = setTimeout(() => {
-          debounceTimer = null;
-        }, 500);
-      }
-    });
 
     boot(reportes[paisInicial] ? paisInicial : Object.keys(reportes)[0]);
   </script>
