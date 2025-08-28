@@ -188,7 +188,7 @@ current_formatted <- tibble(
     scales::percent(current_data$`%D`, accuracy = 0.01),
     scales::percent(current_data$`%W`, accuracy = 0.01),
     scales::percent(current_data$YoY, accuracy = 0.01),
-    paste0("Q ", round((current_data$volatility_20 / 100 * current_data$D_Close), 3)),
+    paste0("L ", round((current_data$volatility_20 / 100 * current_data$D_Close), 3)),
     as.character(current_data$trend_short),
     as.character(current_data$trend_medium),
     as.character(current_data$trend_long)
@@ -331,12 +331,12 @@ risk_metrics <- tibble(
     sd(daily_returns, na.rm = TRUE) * sqrt(252) * 100,
     (mean(daily_returns, na.rm = TRUE) / sd(daily_returns, na.rm = TRUE)) * sqrt(252)
   ),
-  Unidad = c("Q", "%", "Q", "%", "Q", "%", "%", "%", "%", "ratio")
+  Unidad = c("L", "%", "L", "%", "L", "%", "%", "%", "%", "ratio")
 ) %>%
   mutate(
     Valor_fmt = dplyr::case_when(
       Unidad == "%" ~ paste0(scales::number(Valor, accuracy = 0.01), " %"),
-      Unidad == "Q" ~ paste0("Q ", scales::number(Valor, accuracy = 0.01)),
+      Unidad == "L" ~ paste0("L ", scales::number(Valor, accuracy = 0.01)),
       TRUE ~ scales::number(Valor, accuracy = 0.01)
     )
   )
