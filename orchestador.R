@@ -662,6 +662,6 @@ cat("\n💡 Ejecuta generar_todo() para empezar\n")
 #   
 # generar_todo()
 
-generar_todo()
+#generar_todo()
 
-#renderizar_solo_html()
+renderizar_solo_html()
