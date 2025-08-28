@@ -222,7 +222,7 @@ data_24m <- df_data %>% filter(Fecha >= (end_date %m-% months(18)))
 # --- Gráfico superior: Precio + SMA200 (60 meses) ---
 p_top <- ggplot(data_60m, aes(x = Fecha)) +
   geom_line(aes(y = D_Close), color = "black", linewidth = 0.9) +
-  geom_line(aes(y = SMA200), color = "#1e567c", linewidth = 0.9, alpha = 0.9) +
+  geom_line(aes(y = SMA200), color = "#967D00", linewidth = 0.9, alpha = 0.9) +
   labs(
     title = "Tendencia de Largo Plazo (5 años)",
     x = NULL, y = "Nivel del Tipo de Cambio",
@@ -237,10 +237,10 @@ p_bottom <- ggplot(data_24m, aes(x = Fecha)) +
   # Si tienes bandas de Bollinger ya calculadas:
   geom_line(aes(y = D_Close), color = "black", linewidth = 0.9) +
   geom_point(data = current_data, aes(x= Fecha, y = D_Close), color = "red", size = 3, inherit.aes = FALSE) +
-  geom_ribbon(aes(ymin = Lower20, ymax = Higher20), alpha = 0.15, fill = "#86bde2") +
-  geom_ribbon(aes(ymin = Lower50, ymax = Higher50), alpha = 0.10, fill = "#338fce") +
-  geom_line(aes(y = SMA50), color = "#338fce", linewidth = 0.9) +
-  geom_line(aes(y = SMA20), color = "#86bde2", linewidth = 0.9) +
+  geom_ribbon(aes(ymin = Lower20, ymax = Higher20), alpha = 0.15, fill = "#FFD609") +
+  geom_ribbon(aes(ymin = Lower50, ymax = Higher50), alpha = 0.10, fill = "#CCAA00") +
+  geom_line(aes(y = SMA50), color = "#FFD609", linewidth = 0.9) +
+  geom_line(aes(y = SMA20), color = "#CCAA00", linewidth = 0.9) +
   labs(
     title = "Tendencia de Corto Plazo (año y medio)",
     x = NULL, y = "Nivel del Tipo de Cambio",
