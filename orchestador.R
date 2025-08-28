@@ -331,7 +331,7 @@ calculate_max_drawdown <- function(prices) {{
 }}
 
 daily_returns <- df_data$`%D`
-weekly_return <- df_data$`%W`
+weekly_returns <- df_data$`%W`
 annual_returns <- df_data$YoY
 
 # Calcular VaR en dinero
