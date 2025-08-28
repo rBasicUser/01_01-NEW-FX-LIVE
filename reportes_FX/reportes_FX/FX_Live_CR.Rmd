@@ -1,5 +1,5 @@
 ---
-title: "FX Live - Análisis Técnico y de Riesgo - Honduras"
+title: "FX Live - Análisis Técnico y de Riesgo - Costa Rica"
 output:
   html_document:
     toc: true
@@ -105,7 +105,7 @@ theme_fx <- function() {
 ```{r data-load, include=FALSE}
 
 # Cargar datos y preparar Métricas
-source("../scripts/pilot HN.R")
+source("../scripts/pilot CR.R")
 
 # Observaciones actuales
 current_data <- df_data %>% dplyr::slice_tail(n = 1)

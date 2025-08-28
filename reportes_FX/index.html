@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reportes Consolidados</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 16px; }
+    .country-selector {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px; border-radius: 10px; margin-bottom: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .selector-title { color: #fff; font-size: 24px; font-weight: bold; margin-bottom: 15px; text-align: center; }
+    .country-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .country-btn {
+      background: rgba(255,255,255,0.2); color: #fff; border: 2px solid rgba(255,255,255,0.3);
+      padding: 12px 20px; border-radius: 25px; cursor: pointer; transition: all .3s ease;
+      font-weight: bold; backdrop-filter: blur(10px);
+    }
+    .country-btn.active { background: rgba(255,255,255,.35); border-color: rgba(255,255,255,.9); color:#1f2937; }
+
+    /* === Viewer con crossfade === */
+    .viewer-wrap { position: relative; height: 85vh; border:1px solid #e5e7eb; border-radius: 12px; overflow:hidden; }
+    .viewer-wrap iframe {
+      position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+      opacity: 0; transition: opacity .35s ease; background: #fff;
+    }
+    .viewer-wrap iframe.show { opacity: 1; }
+    .loader {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      pointer-events:none; font-size:.95rem; color:#555; background: rgba(255,255,255,0.6);
+      opacity:0; transition: opacity .2s ease;
+    }
+    .loader.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <section class="country-selector">
+    <div class="selector-title">🌎 Seleccione un País</div>
+    <div class="country-buttons" id="picker"></div>
+  </section>
+
+  <div class="viewer-wrap" id="viewerWrap">
+    <div class="loader" id="loader">Cargando reporte…</div>
+    <!-- Dos iframes superpuestos -->
+    <iframe id="frameA" title="Reporte A"></iframe>
+    <iframe id="frameB" title="Reporte B"></iframe>
+  </div>
+
+  <script>
+    // Mapa de reportes (ajusta nombres si difieren)
+    const reportes = {
+      "GT": { nombre: "Guatemala", archivo: "FX_Live_GT.html" },
+      "HN": { nombre: "Honduras", archivo: "FX_Live_HN.html" },
+      "CR": { nombre: "Costa Rica", archivo: "FX_Live_CR.html" },
+      "DO": { nombre: "República Dominicana", archivo: "FX_Live_DO.html" },
+      "MX": { nombre: "México", archivo: "FX_Live_MX.html" }
+    };
+
+    const picker = document.getElementById("picker");
+    const loader = document.getElementById("loader");
+    const frameA = document.getElementById("frameA");
+    const frameB = document.getElementById("frameB");
+
+    // Estado: cuál iframe está visible
+    let visible = frameA;
+
+    // Crear botones
+    for (const cod of Object.keys(reportes)) {
+      const btn = document.createElement("button");
+      btn.className = "country-btn";
+      btn.type = "button";
+      btn.dataset.cod = cod;
+      btn.textContent = reportes[cod].nombre;
+      btn.addEventListener("click", () => setPais(cod));
+      picker.appendChild(btn);
+    }
+
+    // Lee ?country=XX
+    const params = new URLSearchParams(location.search);
+    const paisInicial = (params.get("country") || "GT").toUpperCase();
+
+    function markActive(cod) {
+      for (const b of picker.querySelectorAll(".country-btn")) {
+        b.classList.toggle("active", b.dataset.cod === cod);
+        b.setAttribute("aria-pressed", b.dataset.cod === cod ? "true" : "false");
+      }
+    }
+
+    function setPais(cod) {
+      const info = reportes[cod];
+      if (!info) return;
+
+      // Mostrar loader durante la carga del nuevo iframe
+      loader.classList.add("show");
+
+      // El iframe oculto será el target de carga
+      const hidden = (visible === frameA) ? frameB : frameA;
+
+      // Preparar: ocultar el hidden por si quedó visible antes
+      hidden.classList.remove("show");
+
+      // Cargar el nuevo HTML en el iframe oculto
+      hidden.onload = () => {
+        // cruza opacidades
+        hidden.classList.add("show");     // aparece el nuevo
+        visible.classList.remove("show"); // se desvanece el anterior
+        visible = hidden;                 // actualiza referencia
+        loader.classList.remove("show");
+      };
+      hidden.src = info.archivo;
+
+      // Actualiza querystring sin recargar
+      const url = new URL(location);
+      url.searchParams.set("country", cod);
+      history.replaceState({}, "", url);
+
+      markActive(cod);
+    }
+
+    // Inicio: carga el país inicial en el iframe visible
+    function boot(cod) {
+      const info = reportes[cod] || reportes[Object.keys(reportes)[0]];
+      markActive(cod);
+      loader.classList.add("show");
+      visible.onload = () => {
+        visible.classList.add("show");
+        loader.classList.remove("show");
+      };
+      visible.src = info.archivo;
+      // fija query inicial
+      const url = new URL(location);
+      url.searchParams.set("country", cod);
+      history.replaceState({}, "", url);
+    }
+
+    boot(reportes[paisInicial] ? paisInicial : Object.keys(reportes)[0]);
+  </script>
+</body>
+</html>

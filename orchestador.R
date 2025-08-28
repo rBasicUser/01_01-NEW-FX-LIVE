@@ -34,8 +34,6 @@ crear_rmd_pais <- function(codigo_pais) {
   template_rmd <- glue('
 ---
 title: "FX Live - Análisis Técnico y de Riesgo - {nombres_paises[[codigo_pais]]}"
-author: "Central American Business Intelligence"
-date: "`r format(Sys.Date(), \'%d de %B, %Y\')`"
 output:
   html_document:
     toc: true
@@ -127,13 +125,13 @@ confidence_level <- 0.95
 theme_fx <- function() {{
   theme_minimal(base_family="Century Gothic") +
     theme(
-      plot.title = element_text(size = 14, face = "bold", margin = margin(b = 20)),
-      plot.subtitle = element_text(size = 11, color = "gray60"),
-      axis.title = element_text(size = 11),
+      plot.title = element_text(size = 18, face = "bold", margin = margin(b = 20)),
+      plot.subtitle = element_text(size = 13, color = "gray60"),
+      axis.title = element_text(size = 10),
       axis.text = element_text(size = 10),
       legend.position = "bottom",
       panel.grid.minor = element_blank(),
-      plot.caption = element_text(size = 9, color = "gray50", hjust = 0)
+      plot.caption = element_text(size = 10, color = "gray50", hjust = 0)
     )
 }}
 ```
@@ -161,7 +159,7 @@ vs día anterior)
 
 **Tendencia General:** `r current_data$trend_long` (Largo Plazo)
 
-**Posición en Bandas de Bollinger:** `r current_data$bb_signal`
+**Bandas de Normalidad indican:** `r current_data$bb_signal`
 
 **Percentil Historico:** `r round(current_data$Percentile, 1)`/100
 :::
@@ -211,7 +209,7 @@ library(tibble)
 current_formatted <- tibble(
   Métrica = c(
     "Precio",
-    "Cambio Respecto al día anterior (%)",
+    "Cambio respecto al día anterior (%)",
     "Cambio Semanal (%)",
     "Cambio Anual (%)",
     "Volatilidad (20d)",
@@ -242,7 +240,7 @@ current_formatted %>%
 
 # 📊 Análisis Técnico
 
-## Precio vs Medias Móviles y Bandas de Bollinger
+## Evolución del Precio
 
 ```{{r bollinger-enhanced, fig.height=8}}
 library(patchwork)
@@ -258,7 +256,7 @@ p_top <- ggplot(data_60m, aes(x = Fecha)) +
   geom_line(aes(y = D_Close), color = "black", linewidth = 0.9) +
   geom_line(aes(y = SMA200), color = "#1e567c", linewidth = 0.9, alpha = 0.9) +
   labs(
-    title = "Tendencia de Largo Plazo (5 años)",
+    title = "Largo Plazo (5 años)",
     x = NULL, y = "Nivel del Tipo de Cambio",
     caption = "SMA200: tendencia de largo plazo"
   ) +
@@ -271,14 +269,14 @@ p_bottom <- ggplot(data_24m, aes(x = Fecha)) +
   # Si tienes bandas de Bollinger ya calculadas:
   geom_line(aes(y = D_Close), color = "black", linewidth = 0.9) +
   geom_point(data = current_data, aes(x= Fecha, y = D_Close), color = "red", size = 3, inherit.aes = FALSE) +
-  geom_ribbon(aes(ymin = Lower20, ymax = Higher20), alpha = 0.15, fill = "#86bde2") +
-  geom_ribbon(aes(ymin = Lower50, ymax = Higher50), alpha = 0.10, fill = "#338fce") +
-  geom_line(aes(y = SMA50), color = "#338fce", linewidth = 0.9) +
-  geom_line(aes(y = SMA20), color = "#86bde2", linewidth = 0.9) +
+  geom_ribbon(aes(ymin = Lower20, ymax = Higher20), alpha = 0.15, fill = "#76bcebff") +
+  geom_ribbon(aes(ymin = Lower50, ymax = Higher50), alpha = 0.10, fill = "#12649bff") +
+  geom_line(aes(y = SMA50), color = "#12649bff", linewidth = 0.9) +
+  geom_line(aes(y = SMA20), color = "#76bcebff", linewidth = 0.9) +
   labs(
-    title = "Tendencia de Corto Plazo (año y medio)",
-    x = NULL, y = "Nivel del Tipo de Cambio",
-    caption = "Bandas: SMA20±1SD (clara), SMA50±1SD (mediano plazo)"
+    title = "Corto y Mediano Plazo (año y medio)",
+    x = NULL, y = NULL,
+    caption = "Bandas: Corto Plazo (oscura), Mediano Plazo (Clara)"
   ) +
   theme_fx()
 
@@ -303,8 +301,8 @@ p3 <- ggplot(recent_data, aes(x = Fecha)) +
   geom_hline(yintercept = mediana_money, linetype = "dashed", alpha = 0.7) +
   labs(
     title = "Volatilidad Histórica (20 días)",
-    subtitle = "Anualizada, expresada en dinero",
-    y = "Volatilidad (dinero por unidad)",
+    subtitle = "Anualizada, expresada en moneda",
+    y = NULL,
     x = "Fecha",
     caption = "Línea discontinua: mediana del periodo"
   ) +
@@ -382,6 +380,8 @@ risk_metrics %>%
   kable("html", caption = "Métricas de Riesgo y Performance", col.names = c("Métrica", "Valor")) %>%
   kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
   row_spec(0, bold = TRUE) %>%
+  column_spec(1, width = "300px") %>%
+  column_spec(2, width = "175px") %>%
   pack_rows("Value at Risk", 1, 6) %>%
   pack_rows("Métricas de Volatilidad", 7, 9) %>%
   pack_rows("Ratio de Performance", 10, 10)
@@ -449,12 +449,12 @@ print(p4)
 ```{{r signals-dashboard}}
 signals_data <- tibble(
   Indicador = c(
-    "Precio vs SMA20",
-    "Precio vs SMA50", 
-    "Precio vs SMA200",
-    "SMA20 vs SMA50",
-    "SMA50 vs SMA200",
-    "Bandas Bollinger (20)",
+    "Precio en Corto Plazo",
+    "Precio en Mediano Plazo", 
+    "Precio en Largo Plazo",
+    "Corto vs Mediano Plazo",
+    "Mediano vs Largo Plazo",
+    "Bandas de Normalidad",
     "RSI (14)",
     "Volatilidad vs Mediana"
   ),
@@ -501,18 +501,18 @@ signals_data %>%
 
 <ul>
 
-<li><strong>Bandas de Bollinger:</strong> Calculadas usando SMA ± 1
-desviación estándar</li>
+<li><strong>Bandas de Normalidad:</strong> 
+  Un valor fuera de las bandas de normalidad es un movimiento inusual en el respectivo corto, largo o mediano plazo
+  </li>
 
-<li><strong>RSI:</strong> Índice de Fuerza Relativa de 14 períodos</li>
+<li><strong>RSI:</strong> Índice de Fuerza Relativa: compara caídas y subidas en los últimos 14 días para identificar si puede venir un cambio significativo
+<li><strong>VaR/CVaR:</strong> Value at Risk indica la cantidad que puedo llegar perder ante un evento poco usual
+</li>
 
-<li><strong>VaR/CVaR:</strong> Value at Risk y Conditional VaR al 95% de
-confianza</li>
+<li><strong>Volatilidad:</strong> 
+mide qué tanto ha variado el precio en los últimos 20 días y lo proyecta a lo que sería en un año</li>
 
-<li><strong>Volatilidad:</strong> Anualizada usando factor √252</li>
-
-<li><strong>Tendencias:</strong> Clasificadas según posición relativa de
-precios y medias móviles</li>
+<li><strong>Tendencias:</strong> Trayectoria más probable del Tipo de Cambio</li>
 
 </ul>
 :::
@@ -571,10 +571,6 @@ generar_reportes_fx <- function(paises_a_procesar = paises, renderizar = TRUE) {
   cat("====================================================================\n")
   
   # Crear directorio de salida si no existe
-  if (!fs::dir_exists("reportes_FX")) {
-    fs::dir_create("reportes_FX")
-    cat("📁 Directorio 'Reportes_FX' creado\n")
-  }
   
   # Cambiar al directorio de reportes
   setwd("reportes_FX")
@@ -626,9 +622,13 @@ generar_todo <- function() {
   generar_reportes_fx(renderizar = TRUE)
 }
 
+# Generar y renderizar todos los reportes
+generar_todo <- function() {
+  generar_reportes_fx(renderizar = TRUE)
+}
+
 renderizar_solo_html <- function(paises_a_procesar = paises) {
   # Asegura entrar/salir del directorio correcto
-  if (!fs::dir_exists("reportes_FX")) stop("No existe el directorio 'reportes_FX'")
   old <- setwd("reportes_FX"); on.exit(setwd(old), add = TRUE)
 
   archivos <- glue::glue("FX_Live_{paises_a_procesar}.Rmd")
@@ -662,6 +662,6 @@ cat("\n💡 Ejecuta generar_todo() para empezar\n")
 #   
 # generar_todo()
 
-#generar_todo()
+generar_todo()
 
-renderizar_solo_html()
+#renderizar_solo_html()
