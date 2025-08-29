@@ -355,28 +355,57 @@ risk_metrics %>%
 :::
 
 ::: {}
-```{r trend-analysis}
+```{r trend-analysis-simple}
+# Usar base R para calcular fecha límite (más confiable)
+fecha_actual <- Sys.Date()
+año_actual <- as.numeric(format(fecha_actual, "%Y"))
+mes_actual <- as.numeric(format(fecha_actual, "%m"))
+
+# Calcular 6 meses atrás
+if(mes_actual > 6) {
+  año_limite <- año_actual
+  mes_limite <- mes_actual - 6
+} else {
+  año_limite <- año_actual - 1
+  mes_limite <- mes_actual + 6  # 12 - (6 - mes_actual)
+}
+
+fecha_limite <- as.Date(paste(año_limite, sprintf("%02d", mes_limite), "01", sep = "-"))
+
+cat("Fecha límite calculada:", as.character(fecha_limite), "\n")
+
 trend_summary <- df_data %>%
-  dplyr::filter(Fecha >= (Sys.Date() - months(6))) %>%
-  dplyr::mutate(Mes = lubridate::floor_date(Fecha, "month")) %>%
-  dplyr::group_by(Mes) %>%
+  dplyr::filter(Fecha >= fecha_limite) %>%
+  dplyr::mutate(
+    Año = as.numeric(format(Fecha, "%Y")),
+    Mes = as.numeric(format(Fecha, "%m")),
+    Año_Mes = paste(Año, sprintf("%02d", Mes), sep = "-")
+  ) %>%
+  dplyr::group_by(Año_Mes) %>%
   dplyr::summarise(
     Retorno_Mensual = (dplyr::last(D_Close) / dplyr::first(D_Close) - 1) * 100,
-    .groups = "drop_last"
+    Fecha_Mes = dplyr::first(as.Date(paste(Año_Mes, "01", sep = "-"))),
+    .groups = "drop"
   ) %>%
-  dplyr::ungroup()
+  dplyr::arrange(desc(Fecha_Mes))
 
-trend_summary %>%
-  dplyr::select(Mes, Retorno_Mensual) %>%
-  dplyr::mutate(
-    Mes = format(Mes, "%B %Y"),
-    Retorno_Mensual = paste0(round(Retorno_Mensual, 2), "%")
-  ) %>%
-  kable("html", caption = "Rendimientos Mensuales (Últimos 6 meses)",
-        col.names = c("Mes", "Retorno Mensual")) %>%
-  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed")) %>%
-  row_spec(0, bold = TRUE)
+if(nrow(trend_summary) > 0) {
+  trend_summary %>%
+    dplyr::select(Fecha_Mes, Retorno_Mensual) %>%
+    dplyr::mutate(
+      Mes = format(Fecha_Mes, "%B %Y"),
+      Retorno_Mensual = paste0(round(Retorno_Mensual, 2), "%")
+    ) %>%
+    dplyr::select(Mes, Retorno_Mensual) %>%
+    kable("html", caption = "Rendimientos Mensuales (Últimos 6 meses)",
+          col.names = c("Mes", "Retorno Mensual")) %>%
+    kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover", "condensed")) %>%
+    row_spec(0, bold = TRUE)
+} else {
+  cat("**No se encontraron datos suficientes**\n")
+}
 ```
+
 :::
 :::
 
