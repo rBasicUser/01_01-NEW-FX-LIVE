@@ -140,8 +140,8 @@ df_data %>%
       TRUE ~ "Lateral"
     ),
     trend_long = dplyr::case_when(
-      SMA50 > SMA200 ~ "Apreciación",
-      SMA50 < SMA200 ~ "Depreciación",
+      SMA50 > SMA200 ~ "Depreciación",
+      SMA50 < SMA200 ~ "Apreciación",
       TRUE ~ "Lateral"
     ),
 
