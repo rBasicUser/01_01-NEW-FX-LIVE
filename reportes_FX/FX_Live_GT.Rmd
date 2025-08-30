@@ -1,5 +1,5 @@
 ---
-title: "FX Live - Análisis Técnico y de Riesgo - Guatemala"
+title: "FX Live - Análisis Técnico y de Riesgo - Guatemala (Plotly Version)"
 output:
   html_document:
     toc: true
@@ -72,6 +72,7 @@ library(kableExtra)
 library(DT)
 library(zoo)      # rollmean / rollapply
 library(moments)  # skewness / kurtosis
+library(plotly)   # Nueva librería para gráficas interactivas
 
 knitr::opts_chunk$set(
   echo = FALSE, 
@@ -87,23 +88,22 @@ knitr::opts_chunk$set(
 lookback_months <- 12
 confidence_level <- 0.95
 
-# Tema visual
-theme_fx <- function() {
-  theme_minimal(base_family="Century Gothic") +
-    theme(
-      plot.title = element_text(size = 18, face = "bold", margin = margin(b = 20)),
-      plot.subtitle = element_text(size = 13, color = "gray60"),
-      axis.title = element_text(size = 10),
-      axis.text = element_text(size = 10),
-      legend.position = "bottom",
-      panel.grid.minor = element_blank(),
-      plot.caption = element_text(size = 10, color = "gray50", hjust = 0)
+# Tema visual para plotly
+plotly_config <- function(p) {
+  p %>%
+    config(
+      displayModeBar = TRUE,
+      modeBarButtonsToRemove = c("pan2d", "select2d", "lasso2d", "autoScale2d"),
+      displaylogo = FALSE
+    ) %>%
+    layout(
+      font = list(family = "Arial, sans-serif", size = 12),
+      hovermode = "x unified"
     )
 }
 ```
 
 ```{r data-load, include=FALSE}
-
 # Cargar datos y preparar Métricas
 source("../scripts/pilot GT.R")
 
@@ -131,7 +131,7 @@ vs día anterior)
 :::
 
 ```{r alerts, results="asis"}
-# Alertas
+# Alertas (sin cambios)
 alerts <- list()
 
 if (current_data$Outside20) {
@@ -168,9 +168,8 @@ if (length(alerts) > 0) {
 # 📈 Posición Actual
 
 ```{r current-position}
-# Construcción explícita (evita rename/select/pivot_longer con tipos mixtos)
+# Construcción explícita (sin cambios)
 library(tibble)
-
 
 current_formatted <- tibble(
   Métrica = c(
@@ -201,15 +200,14 @@ current_formatted %>%
   row_spec(0, bold = TRUE, background = "#f8f9fa") %>%
   column_spec(1, bold = TRUE, width = "200px") %>%
   column_spec(2, width = "150px")
-
 ```
 
 # 📊 Análisis Técnico
 
 ## Evolución del Precio
 
-```{r bollinger-enhanced, fig.height=8}
-library(patchwork)
+```{r bollinger-enhanced-plotly, fig.height=8}
+library(plotly)
 recent_data <- df_data %>% dplyr::filter(Fecha >= (Sys.Date() - months(18)))
 
 # Ventanas de tiempo
@@ -218,41 +216,67 @@ data_60m <- df_data %>% filter(Fecha >= (end_date %m-% months(60)))
 data_24m <- df_data %>% filter(Fecha >= (end_date %m-% months(18)))
 
 # --- Gráfico superior: Precio + SMA200 (60 meses) ---
-p_top <- ggplot(data_60m, aes(x = Fecha)) +
-  geom_line(aes(y = D_Close), color = "black", linewidth = 0.9) +
-  geom_line(aes(y = SMA200), color = "#1e567c", linewidth = 0.9, alpha = 0.9) +
-  labs(
-    title = "Largo Plazo (5 años)",
-    x = NULL, y = "Nivel del Tipo de Cambio",
-    caption = "SMA200: tendencia de largo plazo"
-  ) +
-  theme_fx()
+p_top <- plot_ly(data_60m, x = ~Fecha) %>%
+  add_lines(y = ~D_Close, name = "Precio", line = list(color = "black", width = 2),
+            hovertemplate = "Fecha: %{x}<br>Precio: Q%{y:.2f}<extra></extra>") %>%
+  add_lines(y = ~SMA200, name = "SMA 200", line = list(color = "#1e567c", width = 2),
+            hovertemplate = "Fecha: %{x}<br>SMA 200: Q%{y:.2f}<extra></extra>") %>%
+  layout(
+    title = list(text = "Largo Plazo (5 años)", font = list(size = 18)),
+    xaxis = list(title = ""),
+    yaxis = list(title = "Nivel del Tipo de Cambio"),
+    annotations = list(
+      text = "SMA200: tendencia de largo plazo",
+      x = 0, y = -0.15, xref = "paper", yref = "paper",
+      showarrow = FALSE, font = list(size = 10, color = "gray")
+    )
+  ) %>%
+  plotly_config()
 
-print(p_top)
+# --- Gráfico inferior: SMA50, SMA20 y Bandas de Bollinger (24 meses) ---
+p_bottom <- plot_ly(data_24m, x = ~Fecha) %>%
+  # Bandas de Bollinger
+  add_ribbons(ymin = ~Lower50, ymax = ~Higher50, 
+              name = "Banda Mediano Plazo", 
+              fillcolor = "rgba(18, 100, 155, 0.1)",
+              line = list(color = "transparent"),
+              hoverinfo = "skip") %>%
+  add_ribbons(ymin = ~Lower20, ymax = ~Higher20, 
+              name = "Banda Corto Plazo", 
+              fillcolor = "rgba(118, 188, 235, 0.15)",
+              line = list(color = "transparent"),
+              hoverinfo = "skip") %>%
+  # Líneas de precio y medias móviles
+  add_lines(y = ~D_Close, name = "Precio", line = list(color = "black", width = 2),
+            hovertemplate = "Fecha: %{x}<br>Precio: Q%{y:.2f}<extra></extra>") %>%
+  add_lines(y = ~SMA50, name = "SMA 50", line = list(color = "#12649b", width = 2),
+            hovertemplate = "Fecha: %{x}<br>SMA 50: Q%{y:.2f}<extra></extra>") %>%
+  add_lines(y = ~SMA20, name = "SMA 20", line = list(color = "#76bceb", width = 2),
+            hovertemplate = "Fecha: %{x}<br>SMA 20: Q%{y:.2f}<extra></extra>") %>%
+  # Punto actual
+  add_markers(data = current_data, x = ~Fecha, y = ~D_Close, 
+              name = "Precio Actual", marker = list(color = "red", size = 10),
+              hovertemplate = "Precio Actual: Q%{y:.2f}<extra></extra>") %>%
+  layout(
+    title = list(text = "Corto y Mediano Plazo (año y medio)", font = list(size = 18)),
+    xaxis = list(title = "Fecha"),
+    yaxis = list(title = "Nivel del Tipo de Cambio"),
+    annotations = list(
+      text = "Bandas: Corto Plazo (clara), Mediano Plazo (oscura)",
+      x = 0, y = -0.15, xref = "paper", yref = "paper",
+      showarrow = FALSE, font = list(size = 10, color = "gray")
+    )
+  ) %>%
+  plotly_config()
 
-# --- Gráfico inferior: SMA50 y SMA20 (24 meses) ---
-p_bottom <- ggplot(data_24m, aes(x = Fecha)) +
-  # Si tienes bandas de Bollinger ya calculadas:
-  geom_line(aes(y = D_Close), color = "black", linewidth = 0.9) +
-  geom_point(data = current_data, aes(x= Fecha, y = D_Close), color = "red", size = 3, inherit.aes = FALSE) +
-  geom_ribbon(aes(ymin = Lower20, ymax = Higher20), alpha = 0.15, fill = "#76bcebff") +
-  geom_ribbon(aes(ymin = Lower50, ymax = Higher50), alpha = 0.10, fill = "#12649bff") +
-  geom_line(aes(y = SMA50), color = "#12649bff", linewidth = 0.9) +
-  geom_line(aes(y = SMA20), color = "#76bcebff", linewidth = 0.9) +
-  labs(
-    title = "Corto y Mediano Plazo (año y medio)",
-    x = NULL, y = NULL,
-    caption = "Bandas: Corto Plazo (oscura), Mediano Plazo (Clara)"
-  ) +
-  theme_fx()
-
-# --- Ensamble con patchwork: uno sobre otro ---
-print(p_bottom)
+# Mostrar gráficos
+p_top
+p_bottom
 ```
 
 ## Análisis de Volatilidad
 
-```{r volatility-analysis}
+```{r volatility-analysis-plotly}
 # Paso 1: transformar la serie en dinero (precio del día)
 recent_data <- recent_data %>%
   mutate(vol20_money = volatility_20 * D_Close / 100)
@@ -260,22 +284,31 @@ recent_data <- recent_data %>%
 # Paso 2: calcular la mediana de ese periodo en dinero
 mediana_money <- median(recent_data$vol20_money, na.rm = TRUE)
 
-# Paso 3: graficar
-p3 <- ggplot(recent_data, aes(x = Fecha)) +
-  geom_area(aes(y = vol20_money), alpha = 0.3) +
-  geom_line(aes(y = vol20_money), linewidth = 0.8) +
-  geom_hline(yintercept = mediana_money, linetype = "dashed", alpha = 0.7) +
-  labs(
-    title = "Volatilidad Histórica (20 días)",
-    subtitle = "Anualizada, expresada en moneda",
-    y = NULL,
-    x = "Fecha",
-    caption = "Línea discontinua: mediana del periodo"
-  ) +
-  theme_fx()
+# Paso 3: gráfico con plotly
+p3 <- plot_ly(recent_data, x = ~Fecha) %>%
+  add_ribbons(ymin = 0, ymax = ~vol20_money, 
+              name = "Volatilidad", 
+              fillcolor = "rgba(0, 123, 255, 0.3)",
+              line = list(color = "rgba(0, 123, 255, 0.8)", width = 2),
+              hovertemplate = "Fecha: %{x}<br>Volatilidad: Q%{y:.3f}<extra></extra>") %>%
+  add_lines(y = mediana_money, 
+            name = "Mediana del Período", 
+            line = list(color = "gray", width = 2, dash = "dash"),
+            hovertemplate = "Mediana: Q%{y:.3f}<extra></extra>") %>%
+  layout(
+    title = list(text = "Volatilidad Histórica (20 días)", font = list(size = 18)),
+    subtitle = list(text = "Anualizada, expresada en moneda"),
+    xaxis = list(title = "Fecha"),
+    yaxis = list(title = "Volatilidad (Q)"),
+    annotations = list(
+      text = "Línea discontinua: mediana del periodo",
+      x = 0, y = -0.15, xref = "paper", yref = "paper",
+      showarrow = FALSE, font = list(size = 10, color = "gray")
+    )
+  ) %>%
+  plotly_config()
 
-print(p3)
-
+p3
 ```
 
 ## Retorno y Riesgo  
@@ -283,6 +316,7 @@ print(p3)
 ::: {.side-by-side}
 ::: {}
 ```{r risk-metrics}
+# Métricas de riesgo (sin cambios)
 calculate_var <- function(returns, confidence = 0.95) {
   as.numeric(quantile(returns, confidence, na.rm = TRUE))
 }
@@ -356,7 +390,7 @@ risk_metrics %>%
 
 ::: {}
 ```{r trend-analysis-simple}
-# Usar base R para calcular fecha límite (más confiable)
+# Análisis de tendencias (sin cambios)
 fecha_actual <- Sys.Date()
 año_actual <- as.numeric(format(fecha_actual, "%Y"))
 mes_actual <- as.numeric(format(fecha_actual, "%m"))
@@ -367,12 +401,10 @@ if(mes_actual > 6) {
   mes_limite <- mes_actual - 6
 } else {
   año_limite <- año_actual - 1
-  mes_limite <- mes_actual + 6  # 12 - (6 - mes_actual)
+  mes_limite <- mes_actual + 6
 }
 
 fecha_limite <- as.Date(paste(año_limite, sprintf("%02d", mes_limite), "01", sep = "-"))
-
-cat("Fecha límite calculada:", as.character(fecha_limite), "\n")
 
 trend_summary <- df_data %>%
   dplyr::filter(Fecha >= fecha_limite) %>%
@@ -405,14 +437,14 @@ if(nrow(trend_summary) > 0) {
   cat("**No se encontraron datos suficientes**\n")
 }
 ```
-
 :::
 :::
 
 # 📈 Análisis de Distribuciones
 
-```{r distributions, fig.height=10}
-p4 <- df_data %>%
+```{r distributions-plotly, fig.height=10}
+# Preparar datos para plotly
+dist_data <- df_data %>%
   dplyr::select(Fecha, `%D`, `%W`, YoY) %>%
   tidyr::pivot_longer(cols = c(`%D`, `%W`, YoY), names_to = "Periodo", values_to = "Retorno") %>%
   dplyr::mutate(
@@ -423,25 +455,54 @@ p4 <- df_data %>%
       TRUE ~ "Anual"
     )
   ) %>%
-  ggplot(aes(x = Retorno_pct)) +
-  geom_histogram(aes(y = after_stat(density)), bins = 50, alpha = 0.7) +
-  geom_density(linewidth = 1) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  facet_wrap(~Periodo, scales = "free", ncol = 1) +
-  labs(
-    title = "Distribución de Retornos por Período",
-    subtitle = "Histograma con curva de densidad estimada",
-    x = "Retorno (%)",
-    y = "Densidad"
-  ) +
-  theme_fx()
+  filter(!is.na(Retorno_pct))
 
-print(p4)
+# Crear subplots para cada período
+create_distribution_plot <- function(data, period_name) {
+  plot_ly(data, x = ~Retorno_pct, type = "histogram", 
+          name = paste("Histograma", period_name),
+          opacity = 0.7, nbinsx = 50,
+          hovertemplate = "Retorno: %{x:.2f}%<br>Frecuencia: %{y}<extra></extra>") %>%
+    add_lines(x = c(0, 0), y = c(0, max(hist(data$Retorno_pct, plot = FALSE)$counts)),
+              name = "Línea Cero", line = list(color = "red", dash = "dash"),
+              hoverinfo = "skip") %>%
+    layout(
+      title = paste("Distribución de Retornos -", period_name),
+      xaxis = list(title = "Retorno (%)"),
+      yaxis = list(title = "Frecuencia"),
+      showlegend = FALSE
+    )
+}
+
+# Crear gráficos individuales
+p_daily <- dist_data %>% filter(Periodo == "Diario") %>% 
+  create_distribution_plot("Diario")
+
+p_weekly <- dist_data %>% filter(Periodo == "Semanal") %>% 
+  create_distribution_plot("Semanal")
+
+p_annual <- dist_data %>% filter(Periodo == "Anual") %>% 
+  create_distribution_plot("Anual")
+
+# Crear subplot combinado
+p4 <- subplot(p_daily, p_weekly, p_annual, nrows = 3, shareX = FALSE) %>%
+  layout(
+    title = list(text = "Distribución de Retornos por Período", font = list(size = 18)),
+    annotations = list(
+      text = "Histogramas con línea de referencia en cero",
+      x = 0.5, y = -0.05, xref = "paper", yref = "paper",
+      showarrow = FALSE, font = list(size = 10, color = "gray")
+    )
+  ) %>%
+  plotly_config()
+
+p4
 ```
 
 # 📊 Dashboard de Señales
 
 ```{r signals-dashboard}
+# Dashboard de señales (sin cambios)
 signals_data <- tibble(
   Indicador = c(
     "Precio en Corto Plazo",
@@ -489,6 +550,39 @@ signals_data %>%
   pack_rows("Señales de Volatilidad", 8, 8)
 ```
 
+## Gráfico Adicional: RSI Interactivo
+
+```{r rsi-plotly}
+# Gráfico adicional de RSI con plotly
+if (!all(is.na(data_24m$rsi))) {
+  p_rsi <- plot_ly(data_24m, x = ~Fecha) %>%
+    add_lines(y = ~rsi, name = "RSI", line = list(color = "#9b59b6", width = 2),
+              hovertemplate = "Fecha: %{x}<br>RSI: %{y:.1f}<extra></extra>") %>%
+    add_lines(y = 70, name = "Sobrecompra", line = list(color = "red", dash = "dash"),
+              hovertemplate = "Nivel: 70<extra></extra>") %>%
+    add_lines(y = 30, name = "Sobreventa", line = list(color = "green", dash = "dash"),
+              hovertemplate = "Nivel: 30<extra></extra>") %>%
+    add_lines(y = 50, name = "Neutral", line = list(color = "gray", dash = "dot"),
+              hovertemplate = "Nivel: 50<extra></extra>") %>%
+    layout(
+      title = list(text = "Índice de Fuerza Relativa (RSI)", font = list(size = 18)),
+      xaxis = list(title = "Fecha"),
+      yaxis = list(title = "RSI", range = c(0, 100)),
+      shapes = list(
+        list(type = "rect", x0 = min(data_24m$Fecha), x1 = max(data_24m$Fecha),
+             y0 = 70, y1 = 100, fillcolor = "rgba(255, 0, 0, 0.1)", 
+             line = list(width = 0)),
+        list(type = "rect", x0 = min(data_24m$Fecha), x1 = max(data_24m$Fecha),
+             y0 = 0, y1 = 30, fillcolor = "rgba(0, 255, 0, 0.1)", 
+             line = list(width = 0))
+      )
+    ) %>%
+    plotly_config()
+  
+  p_rsi
+}
+```
+
 ------------------------------------------------------------------------
 
 ::: {style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 5px;"}
@@ -500,14 +594,16 @@ signals_data %>%
   Un valor fuera de las bandas de normalidad es un movimiento inusual en el respectivo corto, largo o mediano plazo
   </li>
 
-<li><strong>RSI:</strong> Índice de Fuerza Relativa: compara caídas y subidas en los últimos 14 días para identificar si puede venir un cambio significativo
-<li><strong>VaR/CVaR:</strong> Value at Risk indica la cantidad que puedo llegar perder ante un evento poco usual
-</li>
+<li><strong>RSI:</strong> Índice de Fuerza Relativa: compara caídas y subidas en los últimos 14 días para identificar si puede venir un cambio significativo</li>
+
+<li><strong>VaR/CVaR:</strong> Value at Risk indica la cantidad que puedo llegar perder ante un evento poco usual</li>
 
 <li><strong>Volatilidad:</strong> 
 mide qué tanto ha variado el precio en los últimos 20 días y lo proyecta a lo que sería en un año</li>
 
 <li><strong>Tendencias:</strong> Trayectoria más probable del Tipo de Cambio</li>
+
+<li><strong>Interactividad:</strong> Las gráficas ahora son interactivas - puedes hacer zoom, hover para ver valores exactos, y activar/desactivar series haciendo clic en la leyenda</li>
 
 </ul>
 :::
