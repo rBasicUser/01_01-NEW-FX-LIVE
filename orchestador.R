@@ -4,6 +4,17 @@
 # ====================================================================
 
 # Cargar librerías necesarias
+# install.packages("rmarkdown")
+# install.packages("extrafont")
+# install.packages("kableExtra")
+# install.packages("DT")
+# install.packages("zoo")
+# install.packages("moments")
+# install.packages("modelsummary")
+# install.packages("TTR")
+# install.packages("patchwork")
+
+
 library(rmarkdown)
 library(here)
 library(glue)
